@@ -7,7 +7,6 @@ df = pd.read_csv("data/olympics_dataset.csv")
 
 df = df[(df["Team"] == "Brazil") & (df["Season"] == "Summer")]
 df_medals = df[df["Medal"].isin(["Gold", "Silver", "Bronze"])]
-
 df_medals_unique = df_medals.drop_duplicates(subset=["Year", "Sport", "Event", "Medal"])
 
 card_style = {
@@ -54,17 +53,24 @@ app.layout = html.Div(
         ], style=row_style),
 
         html.Div([
-            html.Div([dcc.Graph(id="medals_by_sex")], style=card_style),
-            html.Div([dcc.Graph(id="top_athletes")], style=card_style),
+            html.Div([dcc.Graph(id="medals_by_sex_evolution")], style=card_style),
+            html.Div([dcc.Graph(id="top_athletes_sex")], style=card_style),
         ], style=row_style),
 
         html.Div([
             html.Div([dcc.Graph(id="growth_sports")], style=card_style),
             html.Div([dcc.Graph(id="forecast_medals")], style=card_style),
         ], style=row_style),
+
+        html.Div([
+            html.Div([dcc.Graph(id="promising_by_sex")], style=card_style),
+        ], style=row_style),
     ]
 )
 
+# -------------------------------------------------------
+# MEDALHAS POR ANO
+# -------------------------------------------------------
 @app.callback(
     Output("medals_by_year", "figure"),
     Input("sport_filter", "value")
@@ -80,7 +86,9 @@ def update_medals_year(sport):
                   title="Evolução das Medalhas por Ano")
     return fig
 
-
+# -------------------------------------------------------
+# MEDALHAS POR ESPORTE (ordenado)
+# -------------------------------------------------------
 @app.callback(
     Output("medals_by_sport", "figure"),
     Input("sport_filter", "value")
@@ -90,50 +98,84 @@ def update_medals_sport(sport):
     if sport:
         filtered = filtered[filtered["Sport"] == sport]
 
-    medals_sport = filtered.groupby("Sport")["Medal"].count().reset_index().sort_values("Medal", ascending=False)
-
-    fig = px.bar(medals_sport, x="Sport", y="Medal",
-                 title="Medalhas por Esporte")
-    return fig
-
-
-@app.callback(
-    Output("medals_by_sex", "figure"),
-    Input("sport_filter", "value")
-)
-def update_medals_sex(sport):
-    filtered = df_medals_unique.copy()
-    if sport:
-        filtered = filtered[filtered["Sport"] == sport]
-
-    sex_medals = filtered.groupby("Sex")["Medal"].count().reset_index()
-
-    fig = px.bar(sex_medals, x="Sex", y="Medal",
-                 title="Medalhas por Sexo")
-    return fig
-
-
-@app.callback(
-    Output("top_athletes", "figure"),
-    Input("sport_filter", "value")
-)
-def update_top_athletes(sport):
-    filtered = df_medals_unique.copy()
-    if sport:
-        filtered = filtered[filtered["Sport"] == sport]
-
-    top = (
-        filtered.groupby("Name")["Medal"]
+    medals_sport = (
+        filtered.groupby("Sport")["Medal"]
         .count()
         .reset_index()
         .sort_values("Medal", ascending=False)
+    )
+
+    fig = px.bar(medals_sport, x="Sport", y="Medal",
+                 title="Medalhas por Esporte (Ordenado)")
+    return fig
+
+# -------------------------------------------------------
+# EVOLUÇÃO POR SEXO AO LONGO DOS ANOS
+# -------------------------------------------------------
+@app.callback(
+    Output("medals_by_sex_evolution", "figure"),
+    Input("sport_filter", "value")
+)
+def update_medals_sex_evolution(sport):
+    filtered = df_medals_unique.copy()
+    if sport:
+        filtered = filtered[filtered["Sport"] == sport]
+
+    evolution = (
+        filtered.groupby(["Year", "Sex"])["Medal"]
+        .count()
+        .reset_index()
+    )
+
+    fig = px.line(
+        evolution,
+        x="Year",
+        y="Medal",
+        color="Sex",
+        markers=True,
+        title="Evolução de Medalhas por Sexo ao Longo dos Anos"
+    )
+
+    return fig
+
+# -------------------------------------------------------
+# RANKING POR SEXO — TOP 10
+# -------------------------------------------------------
+@app.callback(
+    Output("top_athletes_sex", "figure"),
+    Input("sport_filter", "value")
+)
+def update_top_athletes_sex(sport):
+    filtered = df_medals_unique.copy()
+    if sport:
+        filtered = filtered[filtered["Sport"] == sport]
+
+    ranking = (
+        filtered.groupby(["Sex", "Name"])["Medal"]
+        .count()
+        .reset_index()
+    )
+
+    ranking_top = (
+        ranking.sort_values(["Sex", "Medal"], ascending=[True, False])
+        .groupby("Sex")
         .head(10)
     )
 
-    fig = px.bar(top, x="Name", y="Medal",
-                 title="Top 10 Atletas Brasileiros por Medalhas")
+    fig = px.bar(
+        ranking_top,
+        x="Name",
+        y="Medal",
+        color="Sex",
+        title="Top 10 Atletas por Sexo"
+    )
+
+    fig.update_layout(xaxis={'categoryorder': 'total descending'})
     return fig
 
+# -------------------------------------------------------
+# ESPORTES QUE MAIS CRESCEM
+# -------------------------------------------------------
 @app.callback(
     Output("growth_sports", "figure"),
     Input("sport_filter", "value")
@@ -162,6 +204,9 @@ def update_growth_sports(sport):
                  title="Modalidades que Mais Crescem em Medalhas")
     return fig
 
+# -------------------------------------------------------
+# FORECAST FUTURO — REGRESSÃO LINEAR
+# -------------------------------------------------------
 @app.callback(
     Output("forecast_medals", "figure"),
     Input("sport_filter", "value")
@@ -201,6 +246,35 @@ def update_forecast(sport):
     )
 
     return fig
+
+# -------------------------------------------------------
+# MODALIDADES PROMISSORAS POR SEXO
+# -------------------------------------------------------
+@app.callback(
+    Output("promising_by_sex", "figure"),
+    Input("sport_filter", "value")
+)
+def update_promising_by_sex(sport):
+    recent_years = df_medals_unique["Year"].max() - 20
+    df_recent = df_medals_unique[df_medals_unique["Year"] >= recent_years]
+
+    growth = (
+        df_recent.groupby(["Sport", "Sex"])["Medal"]
+        .count()
+        .reset_index()
+    )
+
+    fig = px.bar(
+        growth,
+        x="Sport",
+        y="Medal",
+        color="Sex",
+        barmode="group",
+        title="Modalidades Mais Promissoras por Sexo (Últimos 20 anos)"
+    )
+
+    return fig
+
 
 if __name__ == "__main__":
     app.run(debug=True)
