@@ -70,9 +70,6 @@ app.layout = html.Div(
     ]
 )
 
-# -------------------------------------------------------
-# MEDALHAS POR ANO
-# -------------------------------------------------------
 @app.callback(
     Output("medals_by_year", "figure"),
     Input("sport_filter", "value")
@@ -104,9 +101,6 @@ def update_medals_year(sport):
 
     return fig
 
-# -------------------------------------------------------
-# MEDALHAS POR ESPORTE (ordenado)
-# -------------------------------------------------------
 @app.callback(
     Output("medals_by_sport", "figure"),
     Input("sport_filter", "value")
@@ -127,9 +121,6 @@ def update_medals_sport(sport):
                  title="Medalhas por Esporte (Ordenado)")
     return fig
 
-# -------------------------------------------------------
-# EVOLUÇÃO POR SEXO AO LONGO DOS ANOS
-# -------------------------------------------------------
 @app.callback(
     Output("medals_by_sex_evolution", "figure"),
     Input("sport_filter", "value")
@@ -174,9 +165,6 @@ def update_medals_sex_evolution(sport):
 
     return fig
 
-# -------------------------------------------------------
-# RANKING POR SEXO — TOP 10
-# -------------------------------------------------------
 @app.callback(
     Output("top_athletes_sex", "figure"),
     Input("sport_filter", "value")
@@ -209,9 +197,6 @@ def update_top_athletes_sex(sport):
     fig.update_layout(xaxis={'categoryorder': 'total descending'})
     return fig
 
-# -------------------------------------------------------
-# ESPORTES QUE MAIS CRESCEM
-# -------------------------------------------------------
 @app.callback(
     Output("growth_sports", "figure"),
     Input("sport_filter", "value")
@@ -240,9 +225,6 @@ def update_growth_sports(sport):
                  title="Modalidades que Mais Crescem em Medalhas")
     return fig
 
-# -------------------------------------------------------
-# FORECAST FUTURO — REGRESSÃO LINEAR
-# -------------------------------------------------------
 @app.callback(
     Output("forecast_medals", "figure"),
     Input("sport_filter", "value")
@@ -283,9 +265,6 @@ def update_forecast(sport):
 
     return fig
 
-# -------------------------------------------------------
-# MODALIDADES PROMISSORAS POR SEXO
-# -------------------------------------------------------
 @app.callback(
     Output("promising_by_sex", "figure"),
     Input("sport_filter", "value")
