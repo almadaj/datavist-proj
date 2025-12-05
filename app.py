@@ -8,6 +8,8 @@ df = pd.read_csv("data/olympics_dataset.csv")
 df = df[(df["Team"] == "Brazil") & (df["Season"] == "Summer")]
 df_medals = df[df["Medal"].isin(["Gold", "Silver", "Bronze"])]
 df_medals_unique = df_medals.drop_duplicates(subset=["Year", "Sport", "Event", "Medal"])
+year_city = df.drop_duplicates(subset=["Year"])[["Year", "City"]]
+
 
 card_style = {
     "background": "white",
@@ -82,8 +84,24 @@ def update_medals_year(sport):
 
     medals_year = filtered.groupby("Year")["Medal"].count().reset_index()
 
-    fig = px.line(medals_year, x="Year", y="Medal",
-                  title="Evolução das Medalhas por Ano")
+    medals_year = medals_year.merge(year_city, on="Year", how="left")
+
+    fig = px.line(
+        medals_year,
+        x="Year",
+        y="Medal",
+        title="Evolução das Medalhas por Ano"
+    )
+
+    fig.update_traces(
+        hovertemplate="<br>".join([
+            "Ano: %{x}",
+            "Medalhas: %{y}",
+            "Cidade: %{customdata}"
+        ]),
+        customdata=medals_year["City"]
+    )
+
     return fig
 
 # -------------------------------------------------------
@@ -127,6 +145,8 @@ def update_medals_sex_evolution(sport):
         .reset_index()
     )
 
+    evolution = evolution.merge(year_city, on="Year", how="left")
+
     fig = px.line(
         evolution,
         x="Year",
@@ -135,6 +155,22 @@ def update_medals_sex_evolution(sport):
         markers=True,
         title="Evolução de Medalhas por Sexo ao Longo dos Anos"
     )
+
+    for sex_value in evolution["Sex"].unique():
+        subset = evolution[evolution["Sex"] == sex_value]
+
+        fig.for_each_trace(
+            lambda trace: trace.update(
+                customdata=subset[["City", "Sex"]].to_numpy(),
+                hovertemplate="<br>".join([
+                    "Ano: %{x}",
+                    "Medalhas: %{y}",
+                    "Sexo: %{customdata[1]}",
+                    "Cidade: %{customdata[0]}"
+                ])
+            )
+            if trace.name == sex_value else None
+        )
 
     return fig
 
